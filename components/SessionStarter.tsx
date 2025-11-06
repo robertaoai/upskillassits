@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ export function SessionStarter({ onSessionStarted }: SessionStarterProps) {
   const [personaHint, setPersonaHint] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { setSessionId, setCurrentPrompt } = useSession();
+  const router = useRouter();
 
   const isValidEmail = (email: string) => {
     return email.trim().length > 0 && email.includes('@');
@@ -50,14 +52,23 @@ export function SessionStarter({ onSessionStarted }: SessionStarterProps) {
         throw new Error('No session ID received from server');
       }
 
+      // Store session ID and wait for localStorage to complete
       setSessionId(data.session.id);
       
+      // Store first prompt if available
       if (data.first_prompt) {
         setCurrentPrompt(data.first_prompt);
       }
       
+      // Wait for next tick to ensure localStorage writes complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       toast.success('Assessment started successfully!');
       onSessionStarted?.();
+      
+      // Navigate with first_prompt in state
+      router.push('/answer-flow');
+      
     } catch (error) {
       console.error('Session start error:', error);
       toast.error('Failed to start assessment. Please try again.');

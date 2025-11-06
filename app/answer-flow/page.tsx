@@ -24,13 +24,27 @@ export default function AnswerFlowPage() {
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [optInEmail, setOptInEmail] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const router = useRouter();
 
+  // Hydration guard - verify sessionId exists
   useEffect(() => {
-    if (!sessionId) {
+    const storedSessionId = localStorage.getItem('sessionId');
+    const storedPrompt = localStorage.getItem('currentPrompt');
+    
+    if (!storedSessionId) {
+      console.warn('No session ID found, redirecting to start');
       router.push('/start-flow');
+      return;
     }
-  }, [sessionId, router]);
+    
+    // If currentPrompt not in context, try to load from localStorage
+    if (!currentPrompt && storedPrompt) {
+      setCurrentPrompt(storedPrompt);
+    }
+    
+    setIsHydrated(true);
+  }, [sessionId, currentPrompt, setCurrentPrompt, router]);
 
   const answerCount = answers.length;
   const isComplete = answerCount >= 3;
@@ -93,6 +107,15 @@ export default function AnswerFlowPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Show loader while hydrating
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-[#00FFFF] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0F0F0F] relative overflow-hidden">
