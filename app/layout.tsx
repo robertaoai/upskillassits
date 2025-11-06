@@ -4,14 +4,24 @@ import './globals.css';
 import { SessionProvider } from '@/contexts/SessionContext';
 import { Toaster } from 'sonner';
 
+// Optimize Orbitron - only load weights used for headings/emphasis
 const orbitron = Orbitron({
   subsets: ['latin'],
   variable: '--font-orbitron',
+  weight: ['700', '900'], // Only bold and black weights
+  display: 'swap', // Prevent invisible text during load
+  preload: true,
+  fallback: ['system-ui', 'arial'],
 });
 
+// Optimize Exo 2 - only load weights used for body text
 const exo2 = Exo_2({
   subsets: ['latin'],
   variable: '--font-exo-2',
+  weight: ['400', '600'], // Only regular and semi-bold
+  display: 'swap', // Prevent invisible text during load
+  preload: true,
+  fallback: ['system-ui', 'arial'],
 });
 
 export const metadata: Metadata = {

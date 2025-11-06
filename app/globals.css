@@ -2,29 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:wght@300;400;500;600;700&display=swap');
-
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --background: 220 13% 8%;
+    --foreground: 180 100% 90%;
+    --card: 220 13% 10%;
+    --card-foreground: 180 100% 90%;
+    --popover: 220 13% 10%;
+    --popover-foreground: 180 100% 90%;
+    --primary: 330 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 180 100% 50%;
+    --secondary-foreground: 220 13% 8%;
+    --muted: 220 13% 15%;
+    --muted-foreground: 180 50% 70%;
+    --accent: 84 100% 59%;
+    --accent-foreground: 220 13% 8%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
+    --ring: 330 100% 50%;
+    --radius: 0.5rem;
+    --chart-1: 330 100% 50%;
+    --chart-2: 180 100% 50%;
+    --chart-3: 84 100% 59%;
+    --chart-4: 51 100% 50%;
+    --chart-5: 280 100% 50%;
   }
 }
 
@@ -33,127 +37,59 @@
     @apply border-border;
   }
   body {
-    @apply bg-[#0F0F0F] text-foreground;
-    font-family: 'Exo 2', sans-serif;
+    @apply bg-background text-foreground;
+    font-family: var(--font-exo-2), system-ui, -apple-system, sans-serif;
+    font-weight: 400;
+    font-feature-settings: 'kern' 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
+  /* Headings use Orbitron with optimized weights */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Orbitron', sans-serif;
+    font-family: var(--font-orbitron), system-ui, -apple-system, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  
+  /* Strong emphasis uses black weight */
+  strong, .font-black {
+    font-weight: 900;
+  }
+  
+  /* Semi-bold for emphasis in body text */
+  .font-semibold {
+    font-weight: 600;
   }
 }
 
+/* Cyberpunk neon effects */
 @layer utilities {
-  .neon-text-cyan {
-    color: #00FFFF;
-    text-shadow: 0 0 10px #00FFFF, 0 0 20px #00FFFF, 0 0 30px #00FFFF;
+  .neon-border {
+    border: 2px solid hsl(var(--primary));
+    box-shadow: 
+      0 0 10px hsl(var(--primary) / 0.5),
+      inset 0 0 10px hsl(var(--primary) / 0.2);
   }
   
-  .neon-text-pink {
-    color: #FF0080;
-    text-shadow: 0 0 10px #FF0080, 0 0 20px #FF0080, 0 0 30px #FF0080;
+  .neon-text {
+    color: hsl(var(--primary));
+    text-shadow: 
+      0 0 10px hsl(var(--primary) / 0.8),
+      0 0 20px hsl(var(--primary) / 0.5);
   }
   
-  .neon-text-green {
-    color: #8AFF00;
-    text-shadow: 0 0 10px #8AFF00, 0 0 20px #8AFF00, 0 0 30px #8AFF00;
+  .neon-glow {
+    box-shadow: 
+      0 0 20px hsl(var(--primary) / 0.4),
+      0 0 40px hsl(var(--primary) / 0.2);
   }
   
-  .neon-text-yellow {
-    color: #FCEE09;
-    text-shadow: 0 0 10px #FCEE09, 0 0 20px #FCEE09, 0 0 30px #FCEE09;
-  }
-  
-  .neon-border-cyan {
-    border: 2px solid #00FFFF;
-    box-shadow: 0 0 10px #00FFFF, inset 0 0 10px rgba(0, 255, 255, 0.2);
-  }
-  
-  .neon-border-pink {
-    border: 2px solid #FF0080;
-    box-shadow: 0 0 10px #FF0080, inset 0 0 10px rgba(255, 0, 128, 0.2);
-  }
-  
-  .neon-glow-cyan {
-    box-shadow: 0 0 20px #00FFFF, 0 0 40px #00FFFF, 0 0 60px #00FFFF;
-  }
-  
-  .neon-glow-pink {
-    box-shadow: 0 0 20px #FF0080, 0 0 40px #FF0080, 0 0 60px #FF0080;
-  }
-  
-  .circuit-pattern {
+  .cyber-grid {
     background-image: 
-      linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px),
-      linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+      linear-gradient(hsl(var(--border)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px);
     background-size: 20px 20px;
-  }
-  
-  .glitch {
-    animation: glitch 1s infinite;
-  }
-  
-  @keyframes glitch {
-    0%, 100% {
-      transform: translate(0);
-    }
-    20% {
-      transform: translate(-2px, 2px);
-    }
-    40% {
-      transform: translate(-2px, -2px);
-    }
-    60% {
-      transform: translate(2px, 2px);
-    }
-    80% {
-      transform: translate(2px, -2px);
-    }
-  }
-  
-  .holographic {
-    background: linear-gradient(
-      45deg,
-      #00FFFF 0%,
-      #FF0080 25%,
-      #8AFF00 50%,
-      #FCEE09 75%,
-      #00FFFF 100%
-    );
-    background-size: 200% 200%;
-    animation: holographic-shift 3s ease infinite;
-  }
-  
-  @keyframes holographic-shift {
-    0%, 100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-  }
-  
-  .scan-line {
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .scan-line::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #00FFFF, transparent);
-    animation: scan 2s linear infinite;
-  }
-  
-  @keyframes scan {
-    0% {
-      transform: translateY(0);
-    }
-    100% {
-      transform: translateY(500px);
-    }
   }
 }
