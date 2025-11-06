@@ -10,8 +10,9 @@ const orbitron = Orbitron({
   variable: '--font-orbitron',
   weight: ['700', '900'], // Only bold and black weights
   display: 'swap', // Prevent invisible text during load
-  preload: true,
+  preload: true, // Preload since used in headings
   fallback: ['system-ui', 'arial'],
+  adjustFontFallback: true, // Reduce layout shift
 });
 
 // Optimize Exo 2 - only load weights used for body text
@@ -20,8 +21,9 @@ const exo2 = Exo_2({
   variable: '--font-exo-2',
   weight: ['400', '600'], // Only regular and semi-bold
   display: 'swap', // Prevent invisible text during load
-  preload: true,
+  preload: true, // Preload since used for body text
   fallback: ['system-ui', 'arial'],
+  adjustFontFallback: true, // Reduce layout shift
 });
 
 export const metadata: Metadata = {
@@ -49,6 +51,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Explicitly preload only the fonts we use immediately */}
+        <link
+          rel="preload"
+          href={orbitron.style.fontFamily}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href={exo2.style.fontFamily}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className={`${orbitron.variable} ${exo2.variable}`}>
         <SessionProvider>
           {children}
