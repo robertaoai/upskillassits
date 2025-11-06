@@ -15,7 +15,7 @@ export function SessionGate({
   children, 
   requireSession = false, 
   redirectTo = '/start-flow',
-  timeout = 3200 // Increased from 150ms to 3200ms
+  timeout = 4000 // Increased from 3200ms to 4000ms
 }: SessionGateProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(requireSession);
