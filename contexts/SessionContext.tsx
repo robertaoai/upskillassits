@@ -15,9 +15,8 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [sessionId, setSessionIdState] = useState<string | null>(null);
   const [currentPrompt, setCurrentPromptState] = useState<string | null>(null);
-  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Hydrate from localStorage on mount
+  // Non-blocking hydration - just sync state with localStorage
   useEffect(() => {
     const storedSessionId = localStorage.getItem('sessionId');
     const storedPrompt = localStorage.getItem('currentPrompt');
@@ -28,8 +27,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (storedPrompt) {
       setCurrentPromptState(storedPrompt);
     }
-    
-    setIsHydrated(true);
   }, []);
 
   const setSessionId = (id: string | null) => {
@@ -57,11 +54,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('currentPrompt');
   };
 
-  // Don't render children until hydrated to prevent hydration mismatches
-  if (!isHydrated) {
-    return null;
-  }
-
+  // Render immediately - no hydration blocking
   return (
     <SessionContext.Provider
       value={{ sessionId, setSessionId, currentPrompt, setCurrentPrompt, clearSession }}

@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { SessionGate } from '@/components/SessionGate';
+import { SessionResetter } from '@/components/SessionResetter';
 import { PromptBubble } from '@/components/PromptBubble';
 import { AnswerBubble } from '@/components/AnswerBubble';
-import { SessionResetter } from '@/components/SessionResetter';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,32 +18,37 @@ interface Answer {
 }
 
 export default function AnswerFlowPage() {
-  const { sessionId, currentPrompt, setCurrentPrompt } = useSession();
+  const router = useRouter();
+  const { setCurrentPrompt } = useSession();
+  
+  // Hydration Guard - direct localStorage access
+  const [loading, setLoading] = useState(true);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [firstPrompt, setFirstPrompt] = useState<string | null>(null);
+  
   const [answer, setAnswer] = useState('');
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [optInEmail, setOptInEmail] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
-  const router = useRouter();
 
-  // Hydration guard - verify sessionId exists
+  // Hydration Guard with 150ms timeout
   useEffect(() => {
     const storedSessionId = localStorage.getItem('sessionId');
     const storedPrompt = localStorage.getItem('currentPrompt');
     
-    if (!storedSessionId) {
-      console.warn('No session ID found, redirecting to start');
-      router.push('/start-flow');
-      return;
-    }
-    
-    // If currentPrompt not in context, try to load from localStorage
-    if (!currentPrompt && storedPrompt) {
-      setCurrentPrompt(storedPrompt);
-    }
-    
-    setIsHydrated(true);
-  }, [sessionId, currentPrompt, setCurrentPrompt, router]);
+    const timeout = setTimeout(() => {
+      if (!storedSessionId) {
+        console.warn('No session found after 150ms, redirecting to start');
+        router.push('/start-flow');
+      } else {
+        setSessionId(storedSessionId);
+        setFirstPrompt(storedPrompt);
+        setLoading(false);
+      }
+    }, 150);
+
+    return () => clearTimeout(timeout);
+  }, [router]);
 
   const answerCount = answers.length;
   const isComplete = answerCount >= 3;
@@ -96,6 +100,8 @@ export default function AnswerFlowPage() {
         // Update prompt if available
         if (data.next_prompt) {
           setCurrentPrompt(data.next_prompt);
+          localStorage.setItem('currentPrompt', data.next_prompt);
+          setFirstPrompt(data.next_prompt);
         }
 
         toast.success('Answer submitted!');
@@ -108,11 +114,16 @@ export default function AnswerFlowPage() {
     }
   };
 
-  // Show loader while hydrating
-  if (!isHydrated) {
+  // Show loader while checking session
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-[#00FFFF] animate-spin" />
+        <div className="text-center space-y-4">
+          <Loader2 className="w-12 h-12 text-[#00FFFF] animate-spin mx-auto" />
+          <p className="text-[#00FFFF] font-['Orbitron'] tracking-wider">
+            WAITING FOR SESSION...
+          </p>
+        </div>
       </div>
     );
   }
@@ -141,84 +152,78 @@ export default function AnswerFlowPage() {
           <SessionResetter />
         </div>
 
-        <SessionGate requireSession={true} fallback={
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-12 h-12 text-[#00FFFF] animate-spin" />
-          </div>
-        }>
+        <div className="space-y-6">
+          {/* First Prompt */}
+          {firstPrompt && <PromptBubble prompt={firstPrompt} />}
+
+          {/* Answer Bubbles */}
+          {answers.map((ans, index) => (
+            <AnswerBubble key={ans.timestamp} answer={ans.text} index={index} />
+          ))}
+
+          {/* Input Area */}
           <div className="space-y-6">
-            {/* Current Prompt */}
-            {currentPrompt && <PromptBubble prompt={currentPrompt} />}
-
-            {/* Answer Bubbles */}
-            {answers.map((ans, index) => (
-              <AnswerBubble key={ans.timestamp} answer={ans.text} index={index} />
-            ))}
-
-            {/* Input Area */}
-            <div className="space-y-6">
-              <div className="relative">
-                <div className="absolute -top-3 left-4 bg-[#0F0F0F] px-2">
-                  <span className="text-[#00FFFF] text-xs font-['Orbitron'] tracking-wider">
-                    YOUR RESPONSE
-                  </span>
-                </div>
-                <Textarea
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  placeholder={isComplete ? "Enter your final thoughts..." : "Enter your answer here..."}
-                  className="min-h-[200px] bg-[#1B1B1B] neon-border-cyan text-[#E0E0E0] placeholder:text-[#666666] focus:border-[#00FFFF] font-['Exo_2'] text-lg resize-none"
-                  disabled={isSubmitting}
-                />
-                <div className="absolute bottom-4 right-4 text-xs text-[#666666] font-['Orbitron']">
-                  {answer.length} CHARS
-                </div>
+            <div className="relative">
+              <div className="absolute -top-3 left-4 bg-[#0F0F0F] px-2">
+                <span className="text-[#00FFFF] text-xs font-['Orbitron'] tracking-wider">
+                  YOUR RESPONSE
+                </span>
               </div>
-
-              {/* Opt-in Email Checkbox (visible after 3 answers) */}
-              {isComplete && (
-                <div className="flex items-center space-x-3 p-4 bg-[#1B1B1B] neon-border-green rounded-lg">
-                  <Checkbox
-                    id="opt-in-email"
-                    checked={optInEmail}
-                    onCheckedChange={(checked) => setOptInEmail(checked as boolean)}
-                    className="border-[#8AFF00] data-[state=checked]:bg-[#8AFF00] data-[state=checked]:text-[#0F0F0F]"
-                  />
-                  <label
-                    htmlFor="opt-in-email"
-                    className="text-[#E0E0E0] text-sm font-['Exo_2'] cursor-pointer leading-relaxed"
-                  >
-                    Send me my personalized AI skills report via email
-                  </label>
-                </div>
-              )}
-              
-              {/* Submit Button */}
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting || !answer.trim()}
-                size="lg"
-                className={`w-full ${
-                  isComplete
-                    ? 'bg-gradient-to-r from-[#8AFF00] to-[#FCEE09] hover:from-[#8AFF00]/80 hover:to-[#FCEE09]/80 neon-glow-green border-[#8AFF00]'
-                    : 'bg-gradient-to-r from-[#00FFFF] to-[#8AFF00] hover:from-[#00FFFF]/80 hover:to-[#8AFF00]/80 neon-glow-cyan border-[#00FFFF]'
-                } text-[#0F0F0F] font-bold py-8 text-xl border-2 font-['Orbitron'] tracking-wider disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-3 h-6 w-6 animate-spin" />
-                    PROCESSING...
-                  </>
-                ) : (
-                  <>
-                    <ButtonIcon className="mr-3 h-6 w-6" />
-                    {buttonLabel}
-                  </>
-                )}
-              </Button>
+              <Textarea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                placeholder={isComplete ? "Enter your final thoughts..." : "Enter your answer here..."}
+                className="min-h-[200px] bg-[#1B1B1B] neon-border-cyan text-[#E0E0E0] placeholder:text-[#666666] focus:border-[#00FFFF] font-['Exo_2'] text-lg resize-none"
+                disabled={isSubmitting}
+              />
+              <div className="absolute bottom-4 right-4 text-xs text-[#666666] font-['Orbitron']">
+                {answer.length} CHARS
+              </div>
             </div>
+
+            {/* Opt-in Email Checkbox (visible after 3 answers) */}
+            {isComplete && (
+              <div className="flex items-center space-x-3 p-4 bg-[#1B1B1B] neon-border-green rounded-lg">
+                <Checkbox
+                  id="opt-in-email"
+                  checked={optInEmail}
+                  onCheckedChange={(checked) => setOptInEmail(checked as boolean)}
+                  className="border-[#8AFF00] data-[state=checked]:bg-[#8AFF00] data-[state=checked]:text-[#0F0F0F]"
+                />
+                <label
+                  htmlFor="opt-in-email"
+                  className="text-[#E0E0E0] text-sm font-['Exo_2'] cursor-pointer leading-relaxed"
+                >
+                  Send me my personalized AI skills report via email
+                </label>
+              </div>
+            )}
+            
+            {/* Submit Button */}
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !answer.trim()}
+              size="lg"
+              className={`w-full ${
+                isComplete
+                  ? 'bg-gradient-to-r from-[#8AFF00] to-[#FCEE09] hover:from-[#8AFF00]/80 hover:to-[#FCEE09]/80 neon-glow-green border-[#8AFF00]'
+                  : 'bg-gradient-to-r from-[#00FFFF] to-[#8AFF00] hover:from-[#00FFFF]/80 hover:to-[#8AFF00]/80 neon-glow-cyan border-[#00FFFF]'
+              } text-[#0F0F0F] font-bold py-8 text-xl border-2 font-['Orbitron'] tracking-wider disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300`}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                  PROCESSING...
+                </>
+              ) : (
+                <>
+                  <ButtonIcon className="mr-3 h-6 w-6" />
+                  {buttonLabel}
+                </>
+              )}
+            </Button>
           </div>
-        </SessionGate>
+        </div>
         
         <div className="flex items-center justify-center gap-2 text-xs text-[#00FFFF]/50 font-['Orbitron'] tracking-widest pt-8">
           <div className="w-16 h-px bg-gradient-to-r from-transparent to-[#00FFFF]"></div>
