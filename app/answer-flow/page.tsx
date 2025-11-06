@@ -124,19 +124,34 @@ export default function AnswerFlowPage() {
         toast.success('Assessment completed successfully!');
         router.push('/complete-flow');
       } else {
-        // Regular answer submission
+        // Calculate current question number (1-based index)
+        const questionId = answerCount + 1;
+
+        // FIXED: Send correct payload structure
+        const payload = {
+          question_id: questionId,
+          answer_text: answer.trim()
+        };
+
+        console.log('📤 [ANSWER SUBMISSION] Sending payload:', payload);
+
         const response = await fetch(
           `https://robertcoach.app.n8n.cloud/webhook/6a535534-b0e8-48b5-9bbe-c5b72c35b895/session/${sessionId}/answer`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ answer }),
+            body: JSON.stringify(payload),
           }
         );
 
-        if (!response.ok) throw new Error('Failed to submit answer');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ [ANSWER SUBMISSION] Failed:', errorText);
+          throw new Error('Failed to submit answer');
+        }
 
         const data = await response.json();
+        console.log('✅ [ANSWER SUBMISSION] Response:', data);
 
         // Add current answer to the list
         setAnswers(prev => [...prev, { text: answer, timestamp: Date.now() }]);
