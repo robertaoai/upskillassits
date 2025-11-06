@@ -34,9 +34,18 @@ export default function StartFlowPage() {
     setIsLoading(true);
     const startTime = Date.now();
     
+    // FIXED: Add metadata field with source: "web"
+    const payload = {
+      email: email.trim(),
+      personaHint: personaHint.trim(),
+      metadata: {
+        source: "web"
+      }
+    };
+
     if (debugMode) {
       console.log('🚀 [DEBUG] Starting webhook request...');
-      console.log('📤 [DEBUG] Payload:', { email, personaHint });
+      console.log('📤 [DEBUG] Payload:', payload);
     }
 
     try {
@@ -45,7 +54,7 @@ export default function StartFlowPage() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, personaHint }),
+          body: JSON.stringify(payload),
         }
       );
 
