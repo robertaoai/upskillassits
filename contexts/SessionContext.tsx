@@ -1,7 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
-import { useSessionStorage } from '@/hooks/useSessionStorage';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface SessionContextType {
   sessionId: string | null;
@@ -13,17 +12,46 @@ interface SessionContextType {
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
-export function SessionProvider({ children }: { children: ReactNode }) {
-  const [sessionId, setSessionId] = useSessionStorage<string | null>('sessionId', null);
-  const [currentPrompt, setCurrentPrompt] = useSessionStorage<string | null>('currentPrompt', null);
+export function SessionProvider({ children }: { children: React.ReactNode }) {
+  const [sessionId, setSessionIdState] = useState<string | null>(null);
+  const [currentPrompt, setCurrentPromptState] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedSessionId = localStorage.getItem('sessionId');
+    const storedPrompt = localStorage.getItem('currentPrompt');
+    if (storedSessionId) setSessionIdState(storedSessionId);
+    if (storedPrompt) setCurrentPromptState(storedPrompt);
+  }, []);
+
+  const setSessionId = (id: string | null) => {
+    setSessionIdState(id);
+    if (id) {
+      localStorage.setItem('sessionId', id);
+    } else {
+      localStorage.removeItem('sessionId');
+    }
+  };
+
+  const setCurrentPrompt = (prompt: string | null) => {
+    setCurrentPromptState(prompt);
+    if (prompt) {
+      localStorage.setItem('currentPrompt', prompt);
+    } else {
+      localStorage.removeItem('currentPrompt');
+    }
+  };
 
   const clearSession = () => {
-    setSessionId(null);
-    setCurrentPrompt(null);
+    setSessionIdState(null);
+    setCurrentPromptState(null);
+    localStorage.removeItem('sessionId');
+    localStorage.removeItem('currentPrompt');
   };
 
   return (
-    <SessionContext.Provider value={{ sessionId, setSessionId, currentPrompt, setCurrentPrompt, clearSession }}>
+    <SessionContext.Provider
+      value={{ sessionId, setSessionId, currentPrompt, setCurrentPrompt, clearSession }}
+    >
       {children}
     </SessionContext.Provider>
   );

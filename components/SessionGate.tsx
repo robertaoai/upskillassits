@@ -1,22 +1,18 @@
 'use client';
 
+import React from 'react';
 import { useSession } from '@/contexts/SessionContext';
-import { ReactNode } from 'react';
 
 interface SessionGateProps {
-  children: ReactNode;
-  fallback?: ReactNode;
+  children: React.ReactNode;
   requireSession?: boolean;
+  fallback?: React.ReactNode;
 }
 
-export function SessionGate({ children, fallback = null, requireSession = true }: SessionGateProps) {
+export function SessionGate({ children, requireSession = false, fallback = null }: SessionGateProps) {
   const { sessionId } = useSession();
 
   if (requireSession && !sessionId) {
-    return <>{fallback}</>;
-  }
-
-  if (!requireSession && sessionId) {
     return <>{fallback}</>;
   }
 

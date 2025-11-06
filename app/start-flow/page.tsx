@@ -1,93 +1,143 @@
 'use client';
 
-import { useState } from 'react';
-import { SessionGate } from '@/components/SessionGate';
-import { SessionStarter } from '@/components/SessionStarter';
-import { PromptBubble } from '@/components/PromptBubble';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
-import { ArrowRight, Zap } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Sparkles, Mail, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function StartFlowPage() {
-  const { currentPrompt } = useSession();
-  const [showContinue, setShowContinue] = useState(false);
+  const [email, setEmail] = useState('');
+  const [personaHint, setPersonaHint] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { setSessionId, setCurrentPrompt } = useSession();
   const router = useRouter();
+
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const canSubmit = email.trim() && personaHint.trim() && isValidEmail(email);
+
+  const handleStart = async () => {
+    if (!canSubmit) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        'https://robertcoach.app.n8n.cloud/webhook/session/start',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, personaHint }),
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to start session');
+
+      const data = await response.json();
+      setSessionId(data.session_id);
+      setCurrentPrompt(data.initial_prompt);
+
+      toast.success('Session started successfully!');
+      router.push('/answer-flow');
+    } catch (error) {
+      console.error('Start session error:', error);
+      toast.error('Failed to start session. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0F0F0F] relative overflow-hidden">
       <div className="absolute inset-0 circuit-pattern opacity-20"></div>
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#FF0080] via-[#00FFFF] to-[#8AFF00]"></div>
       
-      <div className="absolute top-20 left-10 w-64 h-64 bg-[#00FFFF]/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#FF0080]/10 rounded-full blur-3xl"></div>
+      <div className="absolute top-20 right-10 w-64 h-64 bg-[#FF0080]/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 left-10 w-96 h-96 bg-[#00FFFF]/10 rounded-full blur-3xl"></div>
       
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="max-w-4xl w-full space-y-12">
-          <div className="text-center space-y-6">
-            <div className="inline-block">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <Zap className="w-12 h-12 text-[#FCEE09] animate-pulse" />
-                <h1 className="text-5xl md:text-7xl font-black neon-text-cyan font-['Orbitron'] tracking-wider glitch">
-                  AI SKILLS
-                </h1>
-              </div>
-              <h2 className="text-4xl md:text-6xl font-black neon-text-pink font-['Orbitron'] tracking-wider">
-                COACH
-              </h2>
-            </div>
-            
-            <div className="relative inline-block">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#00FFFF] to-[#FF0080] blur-xl opacity-50"></div>
-              <p className="relative text-[#8AFF00] text-xl md:text-2xl font-['Exo_2'] font-light tracking-wide">
-                ASSESS // ENHANCE // DOMINATE
-              </p>
-            </div>
-            
-            <div className="flex items-center justify-center gap-4 text-[#00FFFF] text-xs md:text-sm font-['Orbitron'] tracking-widest">
-              <div className="w-12 h-px bg-gradient-to-r from-transparent to-[#00FFFF]"></div>
-              <span>NEURAL INTERFACE READY</span>
-              <div className="w-12 h-px bg-gradient-to-l from-transparent to-[#00FFFF]"></div>
-            </div>
+      <div className="relative z-10 max-w-4xl mx-auto py-20 px-4">
+        <div className="text-center mb-16 space-y-6">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-[#00FFFF] to-[#8AFF00] neon-glow-cyan mb-6">
+            <Sparkles className="w-12 h-12 text-[#0F0F0F]" />
           </div>
-
-          <SessionGate requireSession={false}>
-            <div className="flex justify-center px-4">
-              <SessionStarter onSessionStarted={() => setShowContinue(true)} />
-            </div>
-          </SessionGate>
-
-          <SessionGate requireSession={true}>
-            <div className="space-y-8 px-4">
-              {currentPrompt && <PromptBubble prompt={currentPrompt} />}
-              {showContinue && (
-                <div className="flex justify-center">
-                  <Button
-                    onClick={() => router.push('/answer-flow')}
-                    size="lg"
-                    className="bg-gradient-to-r from-[#8AFF00] to-[#FCEE09] hover:from-[#8AFF00]/80 hover:to-[#FCEE09]/80 text-[#0F0F0F] font-bold px-10 py-6 text-lg neon-glow-pink border-2 border-[#8AFF00] font-['Orbitron'] tracking-wider"
-                  >
-                    CONTINUE <ArrowRight className="ml-3 h-6 w-6" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </SessionGate>
           
-          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 text-xs text-[#00FFFF]/50 font-['Orbitron'] tracking-widest px-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-[#00FFFF] rounded-full animate-pulse"></div>
-              <span>SECURE</span>
+          <h1 className="text-6xl font-black neon-text-cyan font-['Orbitron'] tracking-wider mb-4">
+            AI SKILLS COACH
+          </h1>
+          
+          <p className="text-xl text-[#E0E0E0] font-['Exo_2'] max-w-2xl mx-auto leading-relaxed">
+            Unlock your potential with personalized AI-driven coaching. 
+            <span className="text-[#00FFFF]"> Begin your journey now.</span>
+          </p>
+        </div>
+
+        <div className="bg-[#1B1B1B] neon-border-cyan rounded-2xl p-8 space-y-8">
+          <div className="space-y-4">
+            <div className="relative">
+              <div className="absolute -top-3 left-4 bg-[#1B1B1B] px-2">
+                <span className="text-[#00FFFF] text-xs font-['Orbitron'] tracking-wider">
+                  EMAIL ADDRESS
+                </span>
+              </div>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#00FFFF]" />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  className="pl-12 bg-[#0F0F0F] neon-border-cyan text-[#E0E0E0] placeholder:text-[#666666] focus:border-[#00FFFF] font-['Exo_2'] text-lg h-14"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-[#8AFF00] rounded-full animate-pulse"></div>
-              <span>ENCRYPTED</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-[#FF0080] rounded-full animate-pulse"></div>
-              <span>PRIVATE</span>
+
+            <div className="relative">
+              <div className="absolute -top-3 left-4 bg-[#1B1B1B] px-2 z-10">
+                <span className="text-[#00FFFF] text-xs font-['Orbitron'] tracking-wider">
+                  TELL US ABOUT YOURSELF
+                </span>
+              </div>
+              <div className="relative">
+                <MessageSquare className="absolute left-4 top-4 w-5 h-5 text-[#00FFFF]" />
+                <Textarea
+                  value={personaHint}
+                  onChange={(e) => setPersonaHint(e.target.value)}
+                  placeholder="Describe your role, experience, and what you'd like to achieve..."
+                  className="pl-12 pt-4 min-h-[150px] bg-[#0F0F0F] neon-border-cyan text-[#E0E0E0] placeholder:text-[#666666] focus:border-[#00FFFF] font-['Exo_2'] text-lg resize-none"
+                />
+              </div>
             </div>
           </div>
+
+          <Button
+            onClick={handleStart}
+            disabled={!canSubmit || isLoading}
+            size="lg"
+            className="w-full bg-gradient-to-r from-[#00FFFF] to-[#8AFF00] hover:from-[#00FFFF]/80 hover:to-[#8AFF00]/80 text-[#0F0F0F] font-bold py-8 text-xl neon-glow-cyan border-2 border-[#00FFFF] font-['Orbitron'] tracking-wider disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+          >
+            {isLoading ? (
+              <>
+                <div className="w-6 h-6 border-3 border-[#0F0F0F] border-t-transparent rounded-full animate-spin mr-3"></div>
+                INITIALIZING...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-3 h-6 w-6" />
+                START ASSESSMENT
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 text-xs text-[#00FFFF]/50 font-['Orbitron'] tracking-widest mt-12">
+          <div className="w-16 h-px bg-gradient-to-r from-transparent to-[#00FFFF]"></div>
+          <span>SECURE CONNECTION</span>
+          <div className="w-16 h-px bg-gradient-to-l from-transparent to-[#00FFFF]"></div>
         </div>
       </div>
     </div>

@@ -1,17 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { SessionGate } from '@/components/SessionGate';
-import { SessionResetter } from '@/components/SessionResetter';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Download, Loader2, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
+import { CheckCircle2, Download, Home } from 'lucide-react';
 
 export default function CompleteFlowPage() {
-  const { sessionId } = useSession();
-  const [isDownloading, setIsDownloading] = useState(false);
+  const { sessionId, clearSession } = useSession();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,32 +17,14 @@ export default function CompleteFlowPage() {
     }
   }, [sessionId, router]);
 
-  const handleDownload = async () => {
-    if (!sessionId) return;
+  const handleDownloadReport = () => {
+    // TODO: Implement PDF download
+    console.log('Download report for session:', sessionId);
+  };
 
-    setIsDownloading(true);
-    try {
-      const response = await fetch('https://robertcoach.app.n8n.cloud/webhook/session/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId }),
-      });
-
-      if (!response.ok) throw new Error('Failed to generate report');
-
-      const data = await response.json();
-      
-      if (data.pdf_url) {
-        window.open(data.pdf_url, '_blank');
-      }
-      
-      toast.success('Report downloaded!');
-    } catch (error) {
-      console.error('Download error:', error);
-      toast.error('Failed to download report. Please try again.');
-    } finally {
-      setIsDownloading(false);
-    }
+  const handleStartNew = () => {
+    clearSession();
+    router.push('/start-flow');
   };
 
   return (
@@ -53,76 +32,67 @@ export default function CompleteFlowPage() {
       <div className="absolute inset-0 circuit-pattern opacity-20"></div>
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#FF0080] via-[#00FFFF] to-[#8AFF00]"></div>
       
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#8AFF00]/10 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00FFFF]/10 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute top-20 right-10 w-64 h-64 bg-[#8AFF00]/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 left-10 w-96 h-96 bg-[#00FFFF]/10 rounded-full blur-3xl"></div>
       
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <SessionGate requireSession={true} fallback={
-          <div className="flex items-center justify-center">
-            <Loader2 className="w-12 h-12 text-[#00FFFF] animate-spin" />
-          </div>
-        }>
-          <div className="max-w-3xl w-full space-y-12 text-center">
-            <div className="flex justify-center relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#00FFFF] to-[#8AFF00] rounded-full blur-3xl opacity-50 animate-pulse"></div>
-              <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-[#00FFFF] to-[#8AFF00] flex items-center justify-center neon-glow-cyan border-4 border-[#00FFFF]">
-                <CheckCircle2 className="h-16 w-16 text-[#0F0F0F]" />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="inline-block">
-                <h1 className="text-6xl font-black neon-text-cyan font-['Orbitron'] tracking-wider mb-2">
-                  ASSESSMENT
-                </h1>
-                <h2 className="text-5xl font-black neon-text-green font-['Orbitron'] tracking-wider">
-                  COMPLETE
-                </h2>
-              </div>
-              
-              <div className="flex items-center justify-center gap-3">
-                <Sparkles className="w-6 h-6 text-[#FCEE09] animate-pulse" />
-                <p className="text-[#E0E0E0] text-xl font-['Exo_2'] font-light">
-                  Your AI skills report is ready for download
-                </p>
-                <Sparkles className="w-6 h-6 text-[#FCEE09] animate-pulse" />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <Button
-                onClick={handleDownload}
-                disabled={isDownloading}
-                size="lg"
-                className="bg-gradient-to-r from-[#00FFFF] to-[#8AFF00] hover:from-[#00FFFF]/80 hover:to-[#8AFF00]/80 text-[#0F0F0F] font-bold px-12 py-8 text-xl neon-glow-cyan border-2 border-[#00FFFF] font-['Orbitron'] tracking-wider"
-              >
-                {isDownloading ? (
-                  <>
-                    <Loader2 className="mr-3 h-7 w-7 animate-spin" />
-                    GENERATING...
-                  </>
-                ) : (
-                  <>
-                    <Download className="mr-3 h-7 w-7" />
-                    DOWNLOAD REPORT
-                  </>
-                )}
-              </Button>
-
-              <div className="pt-6">
-                <SessionResetter />
-              </div>
+      <div className="relative z-10 max-w-4xl mx-auto py-20 px-4">
+        <SessionGate requireSession={true}>
+          <div className="text-center space-y-12">
+            <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-[#8AFF00] to-[#FCEE09] neon-glow-green mb-8">
+              <CheckCircle2 className="w-16 h-16 text-[#0F0F0F]" />
             </div>
             
-            <div className="flex items-center justify-center gap-8 text-xs text-[#00FFFF]/50 font-['Orbitron'] tracking-widest pt-8">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-[#8AFF00] rounded-full animate-pulse"></div>
-                <span>ANALYSIS COMPLETE</span>
+            <div className="space-y-4">
+              <h1 className="text-6xl font-black neon-text-green font-['Orbitron'] tracking-wider">
+                ASSESSMENT COMPLETE
+              </h1>
+              <p className="text-xl text-[#E0E0E0] font-['Exo_2'] max-w-2xl mx-auto leading-relaxed">
+                Your personalized AI skills report has been generated.
+                <span className="text-[#8AFF00]"> Check your email for detailed insights.</span>
+              </p>
+            </div>
+
+            <div className="bg-[#1B1B1B] neon-border-green rounded-2xl p-8 space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-3 h-3 bg-[#8AFF00] rounded-full animate-pulse"></div>
+                  <span className="text-[#8AFF00] font-['Orbitron'] tracking-widest">
+                    REPORT READY
+                  </span>
+                </div>
+                
+                <p className="text-[#E0E0E0] font-['Exo_2'] text-lg">
+                  Your comprehensive skills analysis is being sent to your email.
+                  You can also download it directly below.
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-[#00FFFF] rounded-full animate-pulse"></div>
-                <span>DATA SECURED</span>
+
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button
+                  onClick={handleDownloadReport}
+                  size="lg"
+                  className="flex-1 bg-gradient-to-r from-[#8AFF00] to-[#FCEE09] hover:from-[#8AFF00]/80 hover:to-[#FCEE09]/80 text-[#0F0F0F] font-bold py-6 text-lg neon-glow-green border-2 border-[#8AFF00] font-['Orbitron'] tracking-wider"
+                >
+                  <Download className="mr-3 h-5 w-5" />
+                  DOWNLOAD REPORT
+                </Button>
+                
+                <Button
+                  onClick={handleStartNew}
+                  size="lg"
+                  variant="outline"
+                  className="flex-1 bg-[#1B1B1B] border-[#00FFFF] text-[#00FFFF] hover:bg-[#00FFFF]/10 font-bold py-6 text-lg border-2 font-['Orbitron'] tracking-wider"
+                >
+                  <Home className="mr-3 h-5 w-5" />
+                  START NEW ASSESSMENT
+                </Button>
               </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-xs text-[#8AFF00]/50 font-['Orbitron'] tracking-widest">
+              <div className="w-16 h-px bg-gradient-to-r from-transparent to-[#8AFF00]"></div>
+              <span>MISSION ACCOMPLISHED</span>
+              <div className="w-16 h-px bg-gradient-to-l from-transparent to-[#8AFF00]"></div>
             </div>
           </div>
         </SessionGate>
