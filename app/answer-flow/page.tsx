@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SessionResetter } from '@/components/SessionResetter';
 import { PromptBubble } from '@/components/PromptBubble';
 import { AnswerBubble } from '@/components/AnswerBubble';
@@ -19,9 +19,10 @@ interface Answer {
 
 export default function AnswerFlowPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setCurrentPrompt } = useSession();
   
-  // Hydration Guard - direct localStorage access
+  // Event-driven rendering - check multiple sources
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [firstPrompt, setFirstPrompt] = useState<string | null>(null);
@@ -31,24 +32,38 @@ export default function AnswerFlowPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [optInEmail, setOptInEmail] = useState(false);
 
-  // Hydration Guard with 4000ms timeout (increased from 3200ms)
+  // Event-driven session detection with 150ms fallback
   useEffect(() => {
+    // Priority 1: Check router state (immediate propagation)
+    const stateSessionId = (router as any).state?.sessionId;
+    const stateFirstPrompt = (router as any).state?.firstPrompt;
+    
+    // Priority 2: Check localStorage (persistent storage)
     const storedSessionId = localStorage.getItem('sessionId');
     const storedPrompt = localStorage.getItem('currentPrompt');
     
-    const timeout = setTimeout(() => {
-      if (!storedSessionId) {
-        console.warn('No session found after 4000ms, redirecting to start');
+    // Priority 3: Check URL params (fallback)
+    const urlSessionId = searchParams.get('sessionId');
+    const urlPrompt = searchParams.get('firstPrompt');
+    
+    const resolvedSessionId = stateSessionId || storedSessionId || urlSessionId;
+    const resolvedPrompt = stateFirstPrompt || storedPrompt || urlPrompt;
+    
+    if (resolvedSessionId) {
+      // Session found - render immediately
+      setSessionId(resolvedSessionId);
+      setFirstPrompt(resolvedPrompt);
+      setLoading(false);
+    } else {
+      // No session found - wait 150ms then redirect
+      const timeout = setTimeout(() => {
+        console.warn('No session found after 150ms, redirecting to start');
         router.push('/start-flow');
-      } else {
-        setSessionId(storedSessionId);
-        setFirstPrompt(storedPrompt);
-        setLoading(false);
-      }
-    }, 4000); // Increased from 3200ms to 4000ms
-
-    return () => clearTimeout(timeout);
-  }, [router]);
+      }, 150);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [router, searchParams]);
 
   const answerCount = answers.length;
   const isComplete = answerCount >= 3;
@@ -114,14 +129,14 @@ export default function AnswerFlowPage() {
     }
   };
 
-  // Show loader while checking session
+  // Show loader while checking session (event-driven)
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0F0F0F] flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 text-[#00FFFF] animate-spin mx-auto" />
           <p className="text-[#00FFFF] font-['Orbitron'] tracking-wider">
-            WAITING FOR SESSION...
+            LOADING SESSION...
           </p>
         </div>
       </div>
@@ -153,7 +168,7 @@ export default function AnswerFlowPage() {
         </div>
 
         <div className="space-y-6">
-          {/* First Prompt */}
+          {/* First Prompt - Event-driven rendering */}
           {firstPrompt && <PromptBubble prompt={firstPrompt} />}
 
           {/* Answer Bubbles */}

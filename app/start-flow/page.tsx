@@ -39,11 +39,20 @@ export default function StartFlowPage() {
       if (!response.ok) throw new Error('Failed to start session');
 
       const data = await response.json();
+      
+      // Update context (for global state)
       setSessionId(data.session_id);
       setCurrentPrompt(data.initial_prompt);
 
       toast.success('Session started successfully!');
-      router.push('/answer-flow');
+      
+      // Navigate with state transfer for immediate propagation
+      router.push('/answer-flow', { 
+        state: { 
+          sessionId: data.session_id, 
+          firstPrompt: data.initial_prompt 
+        } 
+      } as any);
     } catch (error) {
       console.error('Start session error:', error);
       toast.error('Failed to start session. Please try again.');
