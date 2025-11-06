@@ -32,7 +32,7 @@ export default function AnswerFlowPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [optInEmail, setOptInEmail] = useState(false);
 
-  // Event-driven session detection with 150ms fallback
+  // Event-driven session detection with 4000ms fallback (webhook response: 2900-3300ms)
   useEffect(() => {
     // Priority 1: Check router state (immediate propagation)
     const stateSessionId = (router as any).state?.sessionId;
@@ -55,11 +55,11 @@ export default function AnswerFlowPage() {
       setFirstPrompt(resolvedPrompt);
       setLoading(false);
     } else {
-      // No session found - wait 150ms then redirect
+      // No session found - wait 4000ms then redirect (accommodates webhook response time)
       const timeout = setTimeout(() => {
-        console.warn('No session found after 150ms, redirecting to start');
+        console.warn('No session found after 4000ms, redirecting to start');
         router.push('/start-flow');
-      }, 150);
+      }, 4000);
       
       return () => clearTimeout(timeout);
     }
