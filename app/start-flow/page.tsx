@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/contexts/SessionContext';
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,14 @@ export default function StartFlowPage() {
   const [email, setEmail] = useState('');
   const [personaHint, setPersonaHint] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   const { setSessionId, setCurrentPrompt } = useSession();
   const router = useRouter();
+
+  useEffect(() => {
+    const mode = localStorage.getItem('DISABLE_PROMPT_TIMEOUT') === 'true';
+    setDebugMode(mode);
+  }, []);
 
   const isValidEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -26,6 +32,13 @@ export default function StartFlowPage() {
     if (!canSubmit) return;
 
     setIsLoading(true);
+    const startTime = Date.now();
+    
+    if (debugMode) {
+      console.log('🚀 [DEBUG] Starting webhook request...');
+      console.log('📤 [DEBUG] Payload:', { email, personaHint });
+    }
+
     try {
       const response = await fetch(
         'https://robertcoach.app.n8n.cloud/webhook/session/start',
@@ -36,25 +49,116 @@ export default function StartFlowPage() {
         }
       );
 
+      const elapsed = Date.now() - startTime;
+      
+      if (debugMode) {
+        console.log(`⏱️ [DEBUG] Webhook completed in ${elapsed}ms`);
+        console.log('📊 [DEBUG] Response status:', response.status, response.statusText);
+      }
+
       if (!response.ok) throw new Error('Failed to start session');
 
       const data = await response.json();
       
-      // Update context (for global state)
-      setSessionId(data.session_id);
-      setCurrentPrompt(data.initial_prompt);
+      // CRITICAL: Log raw response structure
+      if (debugMode) {
+        console.log('📦 [DEBUG] RAW WEBHOOK RESPONSE:');
+        console.log(JSON.stringify(data, null, 2));
+        console.log('🔍 [DEBUG] Response type:', Array.isArray(data) ? 'Array' : 'Object');
+        console.log('🔍 [DEBUG] Response length:', Array.isArray(data) ? data.length : 'N/A');
+      }
+
+      // Try to extract session ID from different possible structures
+      let sessionId: string | undefined;
+      let firstPrompt: string | undefined;
+
+      // Check if response is array format (as documented)
+      if (Array.isArray(data) && data.length > 0) {
+        if (debugMode) {
+          console.log('✅ [DEBUG] Response is array, extracting data[0]...');
+          console.log('🔍 [DEBUG] data[0] structure:', JSON.stringify(data[0], null, 2));
+        }
+        
+        sessionId = data[0]?.session?.id;
+        firstPrompt = data[0]?.first_prompt;
+        
+        if (debugMode) {
+          console.log('🔍 [DEBUG] Extracted from array:');
+          console.log('  - sessionId:', sessionId);
+          console.log('  - firstPrompt:', firstPrompt);
+        }
+      } 
+      // Check if response is object format (alternative structure)
+      else if (typeof data === 'object' && data !== null) {
+        if (debugMode) {
+          console.log('⚠️ [DEBUG] Response is object, trying alternative extraction...');
+        }
+        
+        // Try different possible field names
+        sessionId = data.session_id || data.id || data.session?.id;
+        firstPrompt = data.initial_prompt || data.first_prompt || data.prompt;
+        
+        if (debugMode) {
+          console.log('🔍 [DEBUG] Extracted from object:');
+          console.log('  - sessionId:', sessionId);
+          console.log('  - firstPrompt:', firstPrompt);
+          console.log('🔍 [DEBUG] Tried fields:');
+          console.log('  - data.session_id:', data.session_id);
+          console.log('  - data.id:', data.id);
+          console.log('  - data.session?.id:', data.session?.id);
+          console.log('  - data.initial_prompt:', data.initial_prompt);
+          console.log('  - data.first_prompt:', data.first_prompt);
+        }
+      }
+
+      // Validate extracted data
+      if (!sessionId || !firstPrompt) {
+        console.error('❌ [ERROR] Failed to extract session data:');
+        console.error('  - sessionId:', sessionId);
+        console.error('  - firstPrompt:', firstPrompt);
+        console.error('  - Raw response:', data);
+        throw new Error('Invalid response structure from webhook');
+      }
+
+      if (debugMode) {
+        console.log('✅ [DEBUG] Session data validated successfully');
+        console.log('💾 [DEBUG] Updating SessionContext...');
+      }
+
+      // Update context (this should write to localStorage)
+      setSessionId(sessionId);
+      setCurrentPrompt(firstPrompt);
+
+      // Verify localStorage write
+      if (debugMode) {
+        setTimeout(() => {
+          const storedSessionId = localStorage.getItem('sessionId');
+          const storedPrompt = localStorage.getItem('currentPrompt');
+          console.log('🔍 [DEBUG] localStorage verification (after 100ms):');
+          console.log('  - sessionId:', storedSessionId);
+          console.log('  - currentPrompt:', storedPrompt);
+          console.log('  - Match:', storedSessionId === sessionId);
+        }, 100);
+      }
 
       toast.success('Session started successfully!');
       
-      // Navigate with state transfer for immediate propagation
-      router.push('/answer-flow', { 
-        state: { 
-          sessionId: data.session_id, 
-          firstPrompt: data.initial_prompt 
-        } 
-      } as any);
+      if (debugMode) {
+        console.log('🧭 [DEBUG] Navigating to /answer-flow...');
+        console.log('📍 [DEBUG] Using URL params for data transfer');
+      }
+
+      // Navigate with URL params (router state doesn't work in static export)
+      router.push(`/answer-flow?sessionId=${sessionId}&firstPrompt=${encodeURIComponent(firstPrompt)}`);
+      
     } catch (error) {
-      console.error('Start session error:', error);
+      console.error('❌ [ERROR] Start session error:', error);
+      if (debugMode) {
+        console.error('🔍 [DEBUG] Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined
+        });
+      }
       toast.error('Failed to start session. Please try again.');
     } finally {
       setIsLoading(false);
@@ -83,6 +187,15 @@ export default function StartFlowPage() {
             Unlock your potential with personalized AI-driven coaching. 
             <span className="text-[#00FFFF]"> Begin your journey now.</span>
           </p>
+
+          {debugMode && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF0080]/20 border border-[#FF0080] rounded-lg">
+              <div className="w-2 h-2 bg-[#FF0080] rounded-full animate-pulse"></div>
+              <span className="text-[#FF0080] text-xs font-['Orbitron'] tracking-wider">
+                DEBUG MODE ACTIVE
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="bg-[#1B1B1B] neon-border-cyan rounded-2xl p-8 space-y-8">
