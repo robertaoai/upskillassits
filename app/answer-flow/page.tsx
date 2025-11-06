@@ -32,8 +32,15 @@ export default function AnswerFlowPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [optInEmail, setOptInEmail] = useState(false);
 
-  // Event-driven session detection with 4000ms fallback (webhook response: 2900-3300ms)
+  // Debug mode tracking
+  const [debugMode, setDebugMode] = useState(false);
+  const [loadStartTime] = useState(Date.now());
+
+  // Event-driven session detection with conditional timeout
   useEffect(() => {
+    const timeoutDisabled = localStorage.getItem('DISABLE_PROMPT_TIMEOUT') === 'true';
+    setDebugMode(timeoutDisabled);
+
     // Priority 1: Check router state (immediate propagation)
     const stateSessionId = (router as any).state?.sessionId;
     const stateFirstPrompt = (router as any).state?.firstPrompt;
@@ -48,22 +55,45 @@ export default function AnswerFlowPage() {
     
     const resolvedSessionId = stateSessionId || storedSessionId || urlSessionId;
     const resolvedPrompt = stateFirstPrompt || storedPrompt || urlPrompt;
+
+    // Debug logging
+    if (timeoutDisabled) {
+      const elapsed = Date.now() - loadStartTime;
+      console.log('🔍 [DEBUG MODE] Session Detection:', {
+        elapsed: `${elapsed}ms`,
+        sources: {
+          routerState: { sessionId: stateSessionId, prompt: stateFirstPrompt },
+          localStorage: { sessionId: storedSessionId, prompt: storedPrompt },
+          urlParams: { sessionId: urlSessionId, prompt: urlPrompt }
+        },
+        resolved: { sessionId: resolvedSessionId, prompt: resolvedPrompt }
+      });
+    }
     
     if (resolvedSessionId) {
       // Session found - render immediately
       setSessionId(resolvedSessionId);
       setFirstPrompt(resolvedPrompt);
       setLoading(false);
-    } else {
-      // No session found - wait 4000ms then redirect (accommodates webhook response time)
+
+      if (timeoutDisabled) {
+        const elapsed = Date.now() - loadStartTime;
+        console.log(`✅ [DEBUG MODE] Session loaded in ${elapsed}ms`);
+      }
+    } else if (!timeoutDisabled) {
+      // Normal mode: wait 4000ms then redirect
       const timeout = setTimeout(() => {
         console.warn('No session found after 4000ms, redirecting to start');
         router.push('/start-flow');
       }, 4000);
       
       return () => clearTimeout(timeout);
+    } else {
+      // Debug mode: show loading indefinitely, no redirect
+      console.log('🔍 [DEBUG MODE] No session found, waiting indefinitely...');
+      console.log('💡 To re-enable timeout: localStorage.removeItem("DISABLE_PROMPT_TIMEOUT")');
     }
-  }, [router, searchParams]);
+  }, [router, searchParams, loadStartTime]);
 
   const answerCount = answers.length;
   const isComplete = answerCount >= 3;
@@ -136,8 +166,19 @@ export default function AnswerFlowPage() {
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 text-[#00FFFF] animate-spin mx-auto" />
           <p className="text-[#00FFFF] font-['Orbitron'] tracking-wider">
-            LOADING SESSION...
+            {debugMode ? 'DEBUG MODE: WAITING FOR SESSION...' : 'LOADING SESSION...'}
           </p>
+          {debugMode && (
+            <div className="text-xs text-[#8AFF00] font-mono space-y-1 max-w-md">
+              <p>⏱️ Elapsed: {Math.round((Date.now() - loadStartTime) / 1000)}s</p>
+              <p>🔍 Timeout disabled - waiting indefinitely</p>
+              <p>💡 Check console for session detection logs</p>
+              <p className="pt-2 text-[#666666]">
+                To re-enable timeout:<br/>
+                localStorage.removeItem('DISABLE_PROMPT_TIMEOUT')
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -162,6 +203,11 @@ export default function AnswerFlowPage() {
               <span className="text-[#8AFF00] text-sm font-['Orbitron'] tracking-widest">
                 {answerCount}/3 ANSWERS
               </span>
+              {debugMode && (
+                <span className="text-[#FF0080] text-xs font-['Orbitron'] tracking-widest ml-2">
+                  🔍 DEBUG MODE
+                </span>
+              )}
             </div>
           </div>
           <SessionResetter />
