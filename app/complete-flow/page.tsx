@@ -13,19 +13,19 @@ export default function CompleteFlowPage() {
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
-  // Hydration Guard with 150ms timeout
+  // Hydration Guard with 3200ms timeout (increased from 150ms)
   useEffect(() => {
     const storedSessionId = localStorage.getItem('sessionId');
     
     const timeout = setTimeout(() => {
       if (!storedSessionId) {
-        console.warn('No session found after 150ms, redirecting to start');
+        console.warn('No session found after 3200ms, redirecting to start');
         router.push('/start-flow');
       } else {
         setSessionId(storedSessionId);
         setLoading(false);
       }
-    }, 150);
+    }, 3200); // Increased from 150ms to 3200ms
 
     return () => clearTimeout(timeout);
   }, [router]);
